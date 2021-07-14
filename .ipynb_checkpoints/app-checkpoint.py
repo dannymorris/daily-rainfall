@@ -35,6 +35,8 @@ daily_stats = (daily_weather
 
 st.title('Rainfall Trends')
 
+st.write("Updated at: " + datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+
 st.line_chart(daily_stats[['prcp', 'total_prcp_7_days', 'total_prcp_28_days']])
 
 st.dataframe(daily_stats[['prcp', 'total_prcp_7_days', 'total_prcp_28_days']].head(10))

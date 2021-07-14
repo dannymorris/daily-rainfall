@@ -14,6 +14,8 @@ def get_daily_weather(station, start_date, end = datetime.now()):
     df = Daily(station, start=start_date, end=end).convert(units.imperial).fetch().reset_index()
     return(df)
 
+run_dt = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
 station = get_station(lat=43.0505, long=-78.8766, n=1)
 
 daily_weather = get_daily_weather(station=station, start_date = datetime.now() - timedelta(days=60+28))
@@ -35,7 +37,7 @@ daily_stats = (daily_weather
 
 st.title('Rainfall Trends')
 
-st.write("Updated at: " + datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+st.write("Last updated: " + run_dt)
 
 st.line_chart(daily_stats[['prcp', 'total_prcp_7_days', 'total_prcp_28_days']])
 

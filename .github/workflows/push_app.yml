@@ -1,6 +1,6 @@
 name: Deploy app
 
-on: push
+on: pull
     
 jobs:
   build:

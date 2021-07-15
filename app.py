@@ -16,9 +16,30 @@ def get_daily_weather(station, start_date, end = datetime.now()):
 
 run_dt = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-station = get_station(lat=43.0505, long=-78.8766, n=1)
+stations = (Stations().fetch()
+    .query('country == "US"')
+    .pipe(lambda x: x.assign(station_long_name = x['name'] + ", " + x['region']))        
+    .reset_index()
+)
 
-daily_weather = get_daily_weather(station=station, start_date = datetime.now() - timedelta(days=60+28))
+########
+## UI ##
+########
+
+state_selectbox = st.sidebar.selectbox(
+    "Select a state",
+    stations['region'].unique()
+)
+
+station_selectbox = st.sidebar.selectbox(
+    "Select a weather station",
+    stations['name'].loc[stations["region"] == state_selectbox]
+)
+
+selected_station = stations["id"].loc[(stations["name"] == station_selectbox) & (stations["region"] == state_selectbox)].to_list()
+
+daily_weather = get_daily_weather(station = selected_station, 
+                                  start_date = datetime.now() - timedelta(days=60+28))
 
 daily_stats = (daily_weather
     .pipe(lambda x: x.assign(time = x['time'].dt.date))

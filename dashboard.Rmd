@@ -1,0 +1,130 @@
+---
+title: "Untitled"
+output: 
+  flexdashboard::flex_dashboard:
+    orientation: rows
+    vertical_layout: fill
+runtime: shiny
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+library(flexdashboard)
+library(shiny)
+library(ggplot2)
+library(dplyr)
+library(plotly)
+library(DT)
+library(reticulate)
+library(lubridate)
+```
+
+```{r}
+use_condaenv("daily-rainfall", required=T)
+
+source_python("hourly.py")
+source_python("stations.py")
+```
+
+```{r}
+stations <- get_stations() %>% 
+  select(id, name, country, region, hourly_start, hourly_end, latitude, longitude) %>%
+  as_tibble()
+```
+
+```{r}
+# hourly_weather <- get_hourly_weather(station = stations$id[5:100]) %>%
+#   as_tibble()
+# 
+# daily_prec <- hourly_weather %>%
+#   mutate(time_date = as.Date(time)) %>%
+#   group_by(time_date) %>%
+#   summarise(
+#     prcp = sum(prcp)
+#   ) 
+```
+
+Inputs {.sidebar}
+-----------------------------------------------------------------------
+
+```{r}
+# selectInput("station_id", label = h3("Station Id"), 
+#             choices = stations$id, 
+#             selected = "KIAG0")
+
+selectInput("state", label = h3("State"), choices = unique(stations$region), selected = "NY")
+
+station_options <- reactive({
+  stations %>%
+    filter(region == input$state) %>%
+    pull(name) %>%
+    distinct()
+})
+  
+  
+selectInput("station_name", label = h3("Station"), choices = station_options(), selected = "Niagara Falls / Walmore")
+```
+
+Microarray data matrix for 80 experiments with Saccharomyces Cerevisiae
+organism extracted from R's `biclust` package.
+
+Sebastian Kaiser, Rodrigo Santamaria, Tatsiana Khamiakova, Martin Sill, Roberto
+Theron, Luis Quintales, Friedrich Leisch and Ewoud De Troyer. (2015). biclust:
+BiCluster Algorithms. R package version 1.2.0.
+http://CRAN.R-project.org/package=biclust
+
+Row
+-----------------------------------------------------------------------
+
+### Daily Rainfall
+
+```{r}
+station_id <- reactive({
+  stations %>%
+    filter(region == input$state) %>%
+    filter(name == input$station_name()) %>%
+    pull(id)
+})
+```
+
+```{r}
+renderPlotly({
+  hourly_weather <- get_hourly_weather(station = station_id(), days_history = 60) %>%
+    as_tibble() %>%
+    mutate(time = time + hours(4))
+  
+  daily_prec <- hourly_weather %>%
+    mutate(time_date = as.Date(time)) %>%
+    group_by(time_date) %>%
+    summarise(
+      prcp = sum(prcp)
+    ) %>%
+    ggplot(aes(x = time_date, y  = prcp)) +
+    geom_line()
+  
+  ggplotly(daily_prec)
+})
+```
+
+
+Row 
+-----------------------------------------------------------------------
+
+### Hourly Rainfall
+
+```{r}
+renderPlotly({
+  
+  hourly_weather <- get_hourly_weather(station = station_id(), days_history = 2) %>%
+    as_tibble() %>%
+    mutate(time = time + hours(4))
+  
+  p <- hourly_weather %>%
+    ggplot(aes(x = time, y = prcp)) +
+    geom_line()
+  
+  ggplotly(p)
+})
+```
+

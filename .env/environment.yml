@@ -8,6 +8,7 @@ dependencies:
   - numpy=1.19.2
   - jupyterlab
   - streamlit
+  - boto3
   - pip
   - pip:
       - meteostat

@@ -4,62 +4,90 @@ import numpy as np
 import pandas as pd
 from meteostat import Stations, Daily, Hourly, units
 
-def get_station(lat, long, n=1):
-    """Get the weather station(s) nearest to a lat-long coordinate"""
-    stations = Stations().nearby(lat, long)
-    station = stations.fetch(n)
-    return(station)
+from hourly import *
+from daily import *
+from stations import *
 
-def get_daily_weather(station, start_date, end = datetime.now()):
-    df = Daily(station, start=start_date, end=end).convert(units.imperial).fetch().reset_index()
-    return(df)
 
 run_dt = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-stations = (Stations().fetch()
-    .query('country == "US"')
-    .pipe(lambda x: x.assign(station_long_name = x['name'] + ", " + x['region']))        
-    .reset_index()
-)
+stations = get_stations()
 
 ########
 ## UI ##
 ########
 
+states = stations['region'].unique()
+
 state_selectbox = st.sidebar.selectbox(
     "Select a state",
-    stations['region'].unique()
+    states,
+    index = list(states).index("NY")
 )
 
-station_selectbox = st.sidebar.selectbox(
+station_names = stations['name'].loc[stations['region'] == state_selectbox]
+
+names_selectbox = st.sidebar.selectbox(
     "Select a weather station",
-    stations['name'].loc[stations["region"] == state_selectbox]
+    station_names,
+    index = list(station_names).index('Niagara Falls / Walmore')
 )
 
-selected_station = stations["id"].loc[(stations["name"] == station_selectbox) & (stations["region"] == state_selectbox)].to_list()
+def get_station_id(stations_df, state, name):
+    out = stations_df["id"].loc[(stations_df['name'] == name) & (stations_df['region'] == state)].to_list()
+    return(out)
 
-daily_weather = get_daily_weather(station = selected_station, 
-                                  start_date = datetime.now() - timedelta(days=60+28))
+selected_station = get_station_id(stations, state_selectbox, names_selectbox)
 
-daily_stats = (daily_weather
-    .pipe(lambda x: x.assign(time = x['time'].dt.date))
-    .pipe(lambda x: x.assign(prcp = x['prcp'].fillna(0)))
+hourly_weather = get_hourly_weather(station = selected_station, 
+                                    days_history = 60)
+
+daily_prec = (hourly_weather
+    .groupby('time_date')
+    .agg({'prcp': 'sum'})
     .pipe(lambda x: x.assign(total_prcp_7_days = x['prcp'].rolling(7).sum()))
-    .pipe(lambda x: x.assign(total_prcp_14_days = x['prcp'].rolling(14).sum()))
-    .pipe(lambda x: x.assign(total_prcp_28_days = x['prcp'].rolling(28).sum()))
-    .pipe(lambda x: x.assign(avg_tmax_7_days = x['tmax'].rolling(7).mean()))
-    .pipe(lambda x: x.assign(avg_tmin_7_days = x['tmin'].rolling(7).mean()))
-    .loc[:, ['time', 'prcp', 'total_prcp_7_days', 'total_prcp_14_days', 'total_prcp_28_days', 'avg_tmax_7_days', 'avg_tmin_7_days']]
-    .dropna()
-    .rename(columns = {"time": "index"})
-    .set_index(['index'])
-    .sort_index(ascending=False)
+    .pipe(lambda x: x.assign(total_prcp_30_days = x['prcp'].rolling(30).sum()))
+    .reset_index()
+    .sort_values(['time_date'], ascending = False)
 )
+
+daily_prec = pd.melt(daily_prec.head(30), 
+        id_vars=['time_date'], 
+        value_vars=['prcp', 'total_prcp_7_days', 'total_prcp_30_days'])
+
+daily_prec = daily_prec.rename(columns={
+    "prcp": "Total_Daily",
+    "total_prcp_7_days": "Total_7_Day",
+    "total_prcp_30_days": "Total_30_Day"
+})
 
 st.title('Rainfall Trends')
 
 st.write("Last updated: " + run_dt)
 
-st.line_chart(daily_stats[['prcp', 'total_prcp_7_days', 'total_prcp_28_days']])
+st.write("Daily Totals")
 
-st.dataframe(daily_stats[['prcp', 'total_prcp_7_days', 'total_prcp_28_days']].head(10))
+#st.line_chart(daily_prec[['prcp', 'total_prcp_7_days', 'total_prcp_28_days']].head(14))
+
+st.vega_lite_chart(daily_prec, {
+    "mark": {"type": "line", "point": True, "tooltip": True},
+    "width": 600,
+    "height": 350,
+    'encoding': {
+    'x': {'field': 'time_date', 'type': 'temporal', 'tooltip': True},
+    'y': {'field': 'value', 'type': 'quantitative'},
+    "color": {"field": "variable", "type": "nominal"}
+    },
+    }, use_container_width=False)
+
+st.write("24-Hour Hourly Totals")
+
+st.vega_lite_chart(hourly_weather.tail(24), {
+    "mark": {"type": "line", "point": True, "tooltip": True},
+    "width": 600,
+    "height": 350,
+    'encoding': {
+    'x': {'field': 'time', 'type': 'temporal'},
+    'y': {'field': 'prcp', 'type': 'quantitative'},
+    },
+    }, use_container_width=False)

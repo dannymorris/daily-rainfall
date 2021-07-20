@@ -40,7 +40,7 @@ def get_station_id(stations_df, state, name):
 selected_station = get_station_id(stations, state_selectbox, names_selectbox)
 
 hourly_weather = get_hourly_weather(station = selected_station, 
-                                    days_history = 60)
+                                    days_history = 90)
 
 daily_prec = (hourly_weather
     .groupby('time_date')
@@ -49,7 +49,7 @@ daily_prec = (hourly_weather
     .pipe(lambda x: x.assign(total_prcp_30_days = x['prcp'].rolling(30).sum()))
     .reset_index()
     .sort_values(['time_date'], ascending = False)
-    .head(10)
+    .head(60)
     .rename(columns = {'prcp': "Total_Daily",
                       'total_prcp_7_days': "7_Day_Total",
                       'total_prcp_30_days': '30_Day_Total'})
@@ -61,31 +61,60 @@ st.title('Rainfall Trends')
 
 st.write("Last updated: " + run_dt)
 
-st.write("Daily Totals")
+st.write("Daily and Running Totals (Last 60 Days)")
 
-st.write(daily_prec)
+st.vega_lite_chart(
+    data = daily_prec,
+    spec = {
+        "mark": {
+            "type": "line", 
+            "strokeWidth": 2,
+            "point": True,
+            "tooltip": True
+        },
+        "width": 600,
+        "height": 350,
+        'encoding': {
+            'x': {'field': 'time_date', 
+                  'type': 'temporal', 
+                  "axis": {"format": "%b-%d", "title": "Date", "grid": False},
+                  'tooltip': True},
+            'y': {'field': 'value', 
+                  'type': 'quantitative',
+                  "scale": {"padding": 10, 'domainMin': 0, 'domainMax': 13}},
+            "color": {"field": "variable", 
+                      "type": "ordinal"}
+        }
+    }
+)
 
-st.vega_lite_chart(daily_prec, {
-    "mark": {"type": "line", "point": True, "tooltip": True},
-    "width": 600,
-    "height": 350,
-    'encoding': {
-    'x': {'field': 'time_date', 'type': 'temporal', 'tooltip': True},
-    'y': {'field': 'value', 'type': 'quantitative'},
-    "color": {"field": "variable", "type": "nominal"}
-    },
-    }, use_container_width=True)
+st.write("Hourly Totals (Last 24 Hours)")
 
-st.line_chart(daily_prec)
-
-st.write("24-Hour Hourly Totals")
-
-st.vega_lite_chart(hourly_weather.tail(72), {
-    "mark": {"type": "line", "point": True, "tooltip": True},
-    "width": 600,
-    "height": 350,
-    'encoding': {
-    'x': {'field': 'time', 'type': 'temporal'},
-    'y': {'field': 'prcp', 'type': 'quantitative'},
-    },
-    }, use_container_width=False)
+st.vega_lite_chart(
+    data = hourly_weather.tail(24),
+    spec = {
+        "mark": {
+            "type": "line", 
+            "strokeWidth": 2,
+            "point": True,
+            "tooltip": True
+        },
+        "width": 600,
+        "height": 350,
+        'encoding': {
+            'x': {'field': 'time', 
+                  'type': 'temporal', 
+                  "axis": {"title": "Date", "grid": False},
+                  'tooltip': True},
+            'y': {
+                'field': 'prcp',
+                'type': 'quantitative',
+                'scale': {
+                    'padding': 10,
+                    'domainMin': 0,
+                    'domainMax': 1
+                    }
+                 },
+        }
+    }
+)

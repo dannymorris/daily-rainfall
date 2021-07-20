@@ -49,17 +49,13 @@ daily_prec = (hourly_weather
     .pipe(lambda x: x.assign(total_prcp_30_days = x['prcp'].rolling(30).sum()))
     .reset_index()
     .sort_values(['time_date'], ascending = False)
+    .head(10)
+    .rename(columns = {'prcp': "Total_Daily",
+                      'total_prcp_7_days': "7_Day_Total",
+                      'total_prcp_30_days': '30_Day_Total'})
+    .pipe(lambda x: pd.melt(x, id_vars = ['time_date'], 
+                            value_vars = ['Total_Daily', '7_Day_Total', '30_Day_Total']))
 )
-
-daily_prec = pd.melt(daily_prec.head(30), 
-        id_vars=['time_date'], 
-        value_vars=['prcp', 'total_prcp_7_days', 'total_prcp_30_days'])
-
-daily_prec = daily_prec.rename(columns={
-    "prcp": "Total_Daily",
-    "total_prcp_7_days": "Total_7_Day",
-    "total_prcp_30_days": "Total_30_Day"
-})
 
 st.title('Rainfall Trends')
 
@@ -67,7 +63,7 @@ st.write("Last updated: " + run_dt)
 
 st.write("Daily Totals")
 
-#st.line_chart(daily_prec[['prcp', 'total_prcp_7_days', 'total_prcp_28_days']].head(14))
+st.write(daily_prec)
 
 st.vega_lite_chart(daily_prec, {
     "mark": {"type": "line", "point": True, "tooltip": True},
@@ -78,7 +74,9 @@ st.vega_lite_chart(daily_prec, {
     'y': {'field': 'value', 'type': 'quantitative'},
     "color": {"field": "variable", "type": "nominal"}
     },
-    }, use_container_width=False)
+    }, use_container_width=True)
+
+st.line_chart(daily_prec)
 
 st.write("24-Hour Hourly Totals")
 

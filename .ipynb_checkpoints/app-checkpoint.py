@@ -118,3 +118,5 @@ st.vega_lite_chart(
         }
     }
 )
+
+st.write(hourly_weather[['time', 'temp', 'prcp']].tail(24).sort_values(['time'], ascending = False))

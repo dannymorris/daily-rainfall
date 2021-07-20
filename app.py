@@ -82,7 +82,7 @@ st.vega_lite_chart(daily_prec, {
 
 st.write("24-Hour Hourly Totals")
 
-st.vega_lite_chart(hourly_weather.tail(24), {
+st.vega_lite_chart(hourly_weather.tail(72), {
     "mark": {"type": "line", "point": True, "tooltip": True},
     "width": 600,
     "height": 350,

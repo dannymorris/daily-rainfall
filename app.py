@@ -57,7 +57,7 @@ daily_prec = (hourly_weather
                             value_vars = ['Total_Daily', '7_Day_Total', '30_Day_Total']))
 )
 
-st.title('Historical Rainfall Trends')
+st.title('Historical Rainfall Totals')
 
 st.write("Last updated: " + run_dt)
 

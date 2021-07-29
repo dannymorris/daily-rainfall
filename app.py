@@ -39,8 +39,9 @@ def get_station_id(stations_df, state, name):
 
 selected_station = get_station_id(stations, state_selectbox, names_selectbox)
 
-hourly_weather = get_hourly_weather(station = selected_station, 
-                                    days_history = 90)
+hourly_weather = get_hourly_weather(station = selected_station,
+                                    days_history = 90,
+                                    end = datetime.now())
 
 daily_prec = (hourly_weather
     .groupby('time_date')

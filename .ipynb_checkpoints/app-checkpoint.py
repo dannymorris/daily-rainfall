@@ -39,8 +39,9 @@ def get_station_id(stations_df, state, name):
 
 selected_station = get_station_id(stations, state_selectbox, names_selectbox)
 
-hourly_weather = get_hourly_weather(station = selected_station, 
-                                    days_history = 90)
+hourly_weather = get_hourly_weather(station = selected_station,
+                                    days_history = 90,
+                                    end = datetime.now())
 
 daily_prec = (hourly_weather
     .groupby('time_date')
@@ -57,7 +58,7 @@ daily_prec = (hourly_weather
                             value_vars = ['Total_Daily', '7_Day_Total', '30_Day_Total']))
 )
 
-st.title('Rainfall Trends')
+st.title('Historical Rainfall Totals')
 
 st.write("Last updated: " + run_dt)
 
